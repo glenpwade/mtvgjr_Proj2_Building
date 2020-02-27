@@ -4,9 +4,13 @@ gc(TRUE)
 ##====================== Initialisation ========================####
 if (TRUE){
   #setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building")        # Anna's work PC & Laptop - GOOGLE DRIVE
-  setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_GW")        # Glen's home PC - GOOGLE DRIVE
-
+  #setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_GW")     # Glen's home PC - GOOGLE DRIVE
+  #setwd("D:/Source/Project2_Building")                                 # Anna's new Laptop
+  setwd("C:/Source/MTVGJR_MGARCH/Project2_Building")
+  
   source("clsTV.r")
+  source("clsGARCH.r")
+  source("clsMTVGARCH.r")
   library(parallel)
   library(RevoUtilsMath)
   maxThreads <- detectCores()-1
@@ -64,388 +68,6 @@ abline(h=seq(-10,10,5), v=seq(0,7000,500),col="lightgrey")
 lines(e)
 
 
-
-##==============================================================##
-##  TV.ORDER 0, obs 1:7108  ####
-##==============================================================##
-
-if (TRUE) {
-
-  e <- e_wbc
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  TV <- tv(st,tvshape$delta0only)
-  TV <- estimateTV(e,TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(1,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD0.1_1-7108.RDS"
-  simcontrol$numLoops <- 1000
-  simcontrol$numCores <- 3
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}  
-##==============================================================##
-##  TV - AUS_4Banks/WBC ---- ORDER 0.1 ---- obs 1:7108          ##
-
-## Result: Pvals=[TR2: 73%,Robust= 69%] 
-## Fail to Reject the null: H0=Model is sufficient
-##  This is likely caused by issues with the optimiser 
-##  where there are many transitions
-##  So, try a smaller range... 
-##==============================================================##
-
-
-
-##==============================================================##
-##  TV.ORDER 0, obs 1:4000  ####
-##==============================================================##
-
-if (TRUE) {
-  
-  e <- e_wbc[1:4000]
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  TV <- tv(st,tvshape$delta0only)
-  TV <- estimateTV(e,TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(2,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD0.2_1-4000.RDS"
-  simcontrol$numLoops <- 1200
-  simcontrol$numCores <- 3
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-  
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}  # End: if (DoThis)...
-##==============================================================##
-##  TV - AUS_4Banks/WBC ---- obs 1:4000          
-
-## ORDER 0.1 
-## Result: Pvals=[TR2= 3%,Robust= 4%] 
-## ORDER 0.2
-## Result: Pvals=[TR2= 8%,Robust= 2%] 
-## ORDER 0.3
-## Result: Pvals=[TR2= %,Robust= %] 
-
-## Reject the null: H0=Model is sufficient
-## Conclusion: Strong evidence of a transition here
-
-##==============================================================##
-
-
-##==============================================================##
-##  TV.ORDER 1, obs 1:4000  ####
-##==============================================================##
-
-if (TRUE) {
-  
-  e <- e_wbc[1:4000]
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  # Add some estimation controls
-  estCtrl <- list()
-  estCtrl$calcSE <- TRUE
-  estCtrl$verbose <- TRUE
-  
-  TV <- tv(st,tvshape$single)
-  
-  OptCtrl <- TV$optimcontrol
-  OptCtrl$reltol <- 1e-9
-  OptCtrl$ndeps <- c(1e-7,1e-7,1e-7,1e-5)
-  #OptCtrl$parscale <- c(6,6,3,1)
-  TV$optimcontrol <- OptCtrl
-  
-  TV$delta0 <- 0.5
-  TV$pars[1,1] <- 0.01
-  TV$pars[2,1] <- 2.05
-  TV$pars[3,1] <- 0.6
-
-  TV <- estimateTV(e,TV,estCtrl)
-  
-  summary(TV)
-  plot(TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(2,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD1.2_1-4000.RDS"
-  simcontrol$numLoops <- 1200
-  simcontrol$numCores <- 3
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-  
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}
-##==============================================================##
-
-# Estimation Results:
-#   
-#   Delta0 = 0.000207 se0 =  7e-06 
-# 
-#             st1      se1
-# deltaN -0.000113 0.000009
-# speedN  2.875682 0.276979
-# locN1   0.646473 0.029049
-# locN2         NA      NaN
-# 
-# Log-liklihood value:  11811.23
-
-##==============================================================##
-
-##  TV - AUS_4Banks/WBC ---- ---- obs 1:5000          
-## ORDER 1.1 
-## Result: Pvals=[TR2= 92%,Robust= 90%] 
-## ORDER 1.2
-## Result: Pvals=[TR2= 40%,Robust= 43%] 
-## ORDER 1.3
-## Result: Pvals=[TR2= %,Robust=%] 
-
-## Cannot Reject the null
-## Conclusion: No evidence of another transition here
-
-##==============================================================##
-
-
-
-##==============================================================##
-##  TV.ORDER 0, obs 3501:5500  ####
-##==============================================================##
-
-if (TRUE) {
-  
-  e <- e_wbc[3501:5500]
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  TV <- tv(st,tvshape$delta0only)
-  
-  # Add some estimation controls
-  estCtrl <- list()
-  estCtrl$calcSE <- TRUE
-  estCtrl$verbose <- TRUE
-  
-  OptCtrl <- TV$optimcontrol
-  OptCtrl$reltol <- 1e-11
-  OptCtrl$ndeps <- OptCtrl$ndeps * 1e-2
-  #OptCtrl$parscale
-  TV$optimcontrol <- OptCtrl
-  
-  TV$delta0
-  TV$pars[1,1] <- 0.05
-  TV$pars[2,1] <- 2.05
-  TV$pars[3,1] <- 0.65
-  
-  TV <- estimateTV(e,TV,estCtrl)
-  
-  summary(TV)
-  plot(TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(2,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD0.2_3501-5500.RDS"
-  simcontrol$numLoops <- 1200
-  simcontrol$numCores <- 3
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-  
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}  # End: if (DoThis)...
-##==============================================================##
-##  TV - AUS_4Banks/WBC ---- ---- obs 3501:5500
-## ORDER 0.1 
-## Result: Pvals=[TR2= 52%,Robust= 23%] 
-## ORDER 0.2
-## Result: Pvals=[TR2= 3.4%,Robust= 0.4%] 
-## ORDER 0.3
-## Result: Pvals=[TR2= %,Robust= %] 
-
-## Reject the null
-## Conclusion: Strong evidence of a double transition here
-##             Next: Lets try to estimate the 2 transitions we've found
-##==============================================================##
-
-
-
-##==============================================================##
-##  TV.ORDER 2, obs 1:5500  ####
-##==============================================================##
-
-if (TRUE) {
-  
-  e <- e_wbc[1:5500]
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  # Add some estimation controls
-  estCtrl <- list()
-  estCtrl$calcSE <- TRUE
-  estCtrl$verbose <- TRUE
-  
-  TV <- tv(st,c(tvshape$single,tvshape$double1loc))
-
-  OptCtrl <- TV$optimcontrol
-  OptCtrl$reltol <- 1e-9
-  OptCtrl$ndeps <- c(1e-7,1e-7,1e-5,1e-5,1e-7,1e-7,1e-5)
-  #OptCtrl$parscale <- c(6,6,2,1,6,2,1)
-  OptCtrl$parscale <- c(3,3,1,1,3,1,1)
-  TV$optimcontrol <- OptCtrl
-  
-  TV$delta0 <- 0.1
-  TV$pars["deltaN",1] <- 0.05
-  TV$pars["speedN",1] <- 3.05
-  TV$pars["locN1",1] <- 0.3
-  TV$pars["deltaN",2] <- 0.05
-  TV$pars["speedN",2] <- 3.05
-  TV$pars["locN1",2] <- 0.6
-  
-  TV <- estimateTV(e,TV,estCtrl)
-  
-  summary(TV)
-  plot(TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(2,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD2sd.2_1-5500.RDS"
-  simcontrol$numLoops <- 1200
-  simcontrol$numCores <- 3
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-  
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}
-
-##==============================================================##
-
-# Estimation Results:
-#   
-#   Delta0 = 0.001825 se0 =  0.000163 
-# 
-#             st1       st2      se1      se2
-# deltaN -0.000072 -0.001614 0.000008 0.000163
-# speedN  3.461076  6.999988 0.418388 0.175481
-# locN1   0.397173  0.774516 0.022339 0.003241
-# locN2         NA        NA      NaN      NaN
-# 
-# Log-liklihood value:  15732.82 
-
-##==============================================================##
-
-##==============================================================##
-##  TV - AUS_4Banks/WBC ---- ---- obs 1:5500          
-## ORDER 2.1 
-## Result: Pvals=[TR2= 32%,Robust= 16%] 
-## ORDER 2.2
-## Result: Pvals=[TR2= 39%,Robust= 33%] 
-
-## Fail to Reject the null
-## Conclusion: No Evidence of another transition here
-
-##==============================================================##
-
-
-
-##==============================================================##
-##  TV.ORDER 2, obs 1:7108  ####
-##==============================================================##
-
-if (TRUE) {
-  
-  e <- e_wbc[1:7108]
-  nr.obs <- length(e)
-  st <- 1:nr.obs/nr.obs
-  
-  # Add some estimation controls
-  estCtrl <- list()
-  estCtrl$calcSE <- TRUE
-  estCtrl$verbose <- TRUE
-  
-  TV <- tv(st,c(tvshape$single,tvshape$double1loc))
-  
-  OptCtrl <- TV$optimcontrol
-  OptCtrl$reltol <- 1e-9
-  OptCtrl$ndeps <- c(1e-7,1e-7,1e-5,1e-5,1e-7,1e-7,1e-5)
-  OptCtrl$parscale <- c(6,6,1,1,6,1,1)
-  #OptCtrl$parscale <- c(3,3,1,1,3,1,1)
-  TV$optimcontrol <- OptCtrl
-  
-  TV$delta0 <- 0.1
-  TV$pars["deltaN",1] <- 0.05
-  TV$pars["speedN",1] <- 3.05
-  TV$pars["locN1",1] <- 0.3
-  TV$pars["deltaN",2] <- 0.05
-  TV$pars["speedN",2] <- 3.05
-  TV$pars["locN1",2] <- 0.6
-  
-  TV <- estimateTV(e,TV,estCtrl)
-  
-  summary(TV)
-  plot(TV)
-  
-  # Now Test against WBC
-  TV <- setTaylorOrder(2,TV)
-  
-  RefTests <- list()
-  RefTests$LMTR2 <- LM.TR2(e,TV)
-  RefTests$LMRobust <- LM.Robust(e,TV)
-  
-  simcontrol <- list()
-  simcontrol$saveAs <- "WBC.ORD2sd.2_1-7108.RDS"
-  simcontrol$numLoops <- 1200
-  simcontrol$numCores <- 4
-  TEST <- testStatDist(TV,RefData,RefTests,simcontrol)
-  
-  # View Distributions
-  hist(TEST$Stat_TR2,breaks = 15)
-  hist(TEST$Stat_Robust,breaks = 15)
-  
-}
-
 ##==============================================================##
 
 # Estimation Results:
@@ -502,63 +124,202 @@ if (TRUE){
   gc(TRUE)
 }
 
+
+
+TV$optimcontrol <- list(fnscale = -1,parscale=parScale,ndeps=nDeps,reltol=1e-6)
+
+#### ========  SPECIFICATION - ORDER 3  - Results  ======== ####
+
+##======================= 2018 =================================##
+##  TV - AUS_4Banks\WBC ---- ORDER 3 ---- obs 1:7027            ##
+##
+## Result: Pvals=[TR2: %, Robust: %], using
+## TestStat_ProbDist_WBC Logliklihood Value:  -11831.69
+## delta0: 2.315575
+## Pars: 
+##            [,1]       [,2]       [,3]
+##  delta -3.4379046 16.6098169 -14.4907300
+##  speed  1.7795618  4.6358355   5.4461746
+##  loc1   0.5571464  0.6074963   0.6336398
+##  loc2          NA         NA          NA
+## TR2 - Cannot Reject the null: H0=Model is sufficient
+## Robust - Cannot Reject the null: H0=Model is sufficient
+#
+#
+# > TV$Estimated$parsVector
+# delta0     delta1     speed1     loc1.1     delta2     speed2     loc2.1     delta3     speed3     loc3.1 
+# 2.315575  -3.437905   1.779562   0.557146  16.609817   4.635835   0.607496 -14.490730   5.446175   0.633640 
+# > TV$Estimated$stderr
+# delta0   delta1   speed1   loc1.1   delta2   speed2   loc2.1   delta3   speed3   loc3.1 
+# 0.171320 0.344231 0.175136 0.028286 3.901832 0.115704 0.004249 3.912726 0.399028 0.002118 
+# > TV$Estimated$tStat
+# delta0     delta1     speed1     loc1.1     delta2     speed2     loc2.1     delta3     speed3     loc3.1 
+# 13.516080  -9.987203  10.161029  19.696882   4.256928  40.066333 142.973876  -3.703487  13.648604 299.169027 
+# > TV$Estimated$PValues
+# delta0*  delta1*  speed1*  loc1.1*  delta2*  speed2*  loc2.1*  delta3*  speed3*  loc3.1* 
+#   0.000000 0.000000 0.000000 0.000000 0.000020 0.000000 0.000000 0.000204 0.000000 0.000000 
+# 
+##  I would recommend using this model!
+#
+##==============================================================##
+
+
 if (TRUE) {
-  
-  source("clsMTVGARCH.r")
   
   e <- e_wbc
   nr.obs <- length(e)
   st <- 1:nr.obs/nr.obs
+  estCtrl <- list(calcSE = TRUE,verbose = TRUE)
   
-  TV <- tv(st,c(tvshape$single,tvshape$double1loc))
+  TV <- tv(st,c(tvshape$single,tvshape$single,tvshape$single))
   
   OptCtrl <- TV$optimcontrol
-  OptCtrl$reltol <- 1e-9
-  OptCtrl$ndeps <- c(1e-7,1e-7,1e-5,1e-5,1e-7,1e-7,1e-5)
-  OptCtrl$parscale <- c(6,6,1,1,6,1,1)
+  OptCtrl$reltol <- 1e-7
+  OptCtrl$parscale <- c(1, 1,1,0.2, 3,1,0.2, 3,1,0.2)
+  OptCtrl$ndeps <- rep(1e-5,TV@nr.pars)
+  #OptCtrl$ndeps <- c(1e-5, 1e-5,1e-7,1e-5, 1e-7,1e-5,1e-5, 1e-7,1e-5,1e-5)
   TV$optimcontrol <- OptCtrl
   
-  TV$delta0 <- 1
-  TV$pars["deltaN",1] <- 1
-  TV$pars["speedN",1] <- 3.05
-  TV$pars["locN1",1] <- 0.3
-  TV$pars["deltaN",2] <- 1
-  TV$pars["speedN",2] <- 3.05
-  TV$pars["locN1",2] <- 0.6
-  
-  estCtrl <- list(calcSE = TRUE,verbose = TRUE)
+  TV$delta0 <- 1.0
+  TV$pars["deltaN",] <- c(1, 3, -3)
+  TV$pars["speedN",] <- c(3, 3, 3)
+  TV$pars["locN1",] <- c(0.3, 0.4, 0.8)
+
   TV <- estimateTV(e,TV,estCtrl)
   
   summary(TV)
   plot(TV)
 
-  # Create the MTV-GJR object
-  MTV_wbc <- mtvgarch(TV,garchType = garchtype$gjr)
-  
-  # Estimate the MTV-GJR object
-  MTV_wbc <- estimateMTVGARCH(e,MTV_wbc)  
-  
-  # Look at the univariate MTV-GJR object:
-  # Plot univar TV 'g'
-  plot(MTV_wbc$tv)
-  # Overlay the final estimated TV 'g'
-  lines(MTV_wbc$Estimated$tv@g,type="l",col="red")
-  # If the scale is off, plot the Estimated TV 'g'
-  plot(MTV_wbc$Estimated$tv@g,type="l",col="red")
-  
-  # Plot univar Garch 'h'
-  plot(MTV_wbc$garch@h,type="l")
-  # Overlay the final estimated Garch 'h'
-  lines(MTV_wbc$Estimated$garch@h,type="l",col="red")
-  # If the scale is off, plot the Estimated Garch 'h'
-  plot(MTV_wbc$Estimated$garch@h,type="l",col="red")
-  
-  # Look at the final parameters
-  summary(MTV_wbc$Estimated$tv)
-  summary(MTV_wbc$Estimated$garch)
-  
   # Save the estimated model
   saveRDS(MTV_wbc,"Output/WBC_mtvgjr.RDS")
   
 
 }
+
+
+##==============================================================##
+##  TV.ORDER 3, MTVGJR Model - Manual Estimation   ####
+##==============================================================##
+
+if (TRUE) {
+  
+  # Create e, TV1 & G1 
+  # make an original copy of the data:
+  e_orig <- e
+  estCtrl <- list(calcSE = TRUE, verbose = TRUE)
+  
+  TV1 <- TV  # Estimated above
+  
+  G1 <- garch(garchtype$gjr)
+  
+  OptCtrl <- G1$optimcontrol
+  OptCtrl$reltol <- 1e-7
+  OptCtrl$ndeps <- c(1e-5,1e-5,1e-5,1e-5)
+  OptCtrl$parscale <- c(1,1,9,1)
+  G1$optimcontrol <- OptCtrl
+  
+  G1$pars["omega",1] <- 0.01
+  G1$pars["alpha",1] <- 0.02
+  G1$pars["beta",1] <- 0.8
+  G1$pars["gamma",1] <- 0.03
+  
+  G1 <- estimateGARCH(e,G1,estCtrl)
+  summary(G1)
+  plot(G1)
+  
+  MTV1 <- mtvgarch(e,TV1,G1)
+  
+  ###  START THE PAIR_WISE ESTIMATION HERE  ###
+  
+  # Filter out Garch & estimate TV component
+  if(TRUE) {
+    
+    #lG1 <- MTV1@garch                # For first iteration
+
+    lastResult <- length(MTV1$results)
+    lG1 <- MTV1$results[[lastResult]]$garch   # For subsequent iterations 
+
+    e <- e_orig/sqrt(lG1@h)
+    
+    #lT1 <- MTV1@tv                # For first iteration
+    lT1 <- MTV1$results[[lastResult]]$tv   # For subsequent iterations 
+    
+    summary(lT1)
+    plot(lT1)
+    ll.target <- getTargetValue(e,lT1)
+    
+    lT1$delta0 <- lT1$Estimated$delta0
+    lT1$pars <- lT1$Estimated$pars * 0.9943
+    
+    # lT1$pars["deltaN",] <- c(1, 1, 1)
+    lT1$pars["speedN",] <- c(0.8, 3, 3)
+    # lT1$pars["locN1",] <- c(0.2, 0.5, 0.5)
+    
+    OptCtrl <- lT1$optimcontrol
+    OptCtrl$reltol <- 1e-9
+    OptCtrl$parscale <- c(1,1,0.2, 3,2,0.2, 3,2,0.2)
+    #OptCtrl$ndeps <- rep(1e-5,lT1@nr.pars)
+    OptCtrl$parscale <- c(1,2,1, 3,3,1, 3,3,1)
+    OptCtrl$ndeps <- c(1e-7,1e-7,1e-7, 1e-7,1e-7,1e-7, 1e-7,1e-7,1e-7)
+    lT1$optimcontrol <- OptCtrl
+    
+    lT1 <- estimateTV(e,lT1,estCtrl)
+    summary(lT1)  
+    plot(lT1)
+    
+    # Check that the LL is higher than the target:
+    lT1$Estimated$value > ll.target 
+    
+  }
+  
+  # Filter out TV & estimate GARCH component
+  if(TRUE) {
+    
+    e <- e_orig/sqrt(lT1@g)
+    
+    summary(lG1)
+    ll.target <- getTargetValue(e,garchObj = lG1)
+    lG1$pars <- lG1$Estimated$pars * 0.987
+    
+    # lG1$pars["omega",1] <- 0.05
+    # lG1$pars["alpha",1] <- 0.05
+    # lG1$pars["beta",1] <- 0.80
+    # lG1$pars["gamma",1] <- 0.05
+    
+    optCtrl <- lG1$optimcontrol
+    optCtrl$reltol <- 1e-9
+    optCtrl$ndeps <- c(1e-7,1e-7,1e-7,1e-7)
+    optCtrl$parscale <- c(1,1,9,1)
+    lG1$optimcontrol <- optCtrl
+    
+    lG1 <- estimateGARCH(e,lG1,estCtrl)
+    summary(lG1)  
+    plot(lG1)
+    
+    # Check that the LL is higher than the target:
+    lG1$Estimated$value > ll.target 
+    
+  }
+  
+  # Now call the calculate liklihood method for mtvgarch
+  
+  MTV1 <- calcLoglik(MTV1,lT1,lG1)
+  
+  # Pick the best specification & write it to the Estimated List:
+  MTV1$Estimated[[1]] <- MTV1$results[[7]]
+  
+  # Save the estimated model
+  saveRDS(MTV1,"Output/WBC_mtvgjr_manual.RDS")
+}
+
+##==============================================================##
+##                            THE END
+##==============================================================##
+
+
+
+
+
+
+
+
