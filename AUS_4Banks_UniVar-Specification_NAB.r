@@ -4,8 +4,9 @@ gc(TRUE)
 ##====================== Initialisation ========================####
 if (TRUE){
   #setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building")        # Anna's work PC & Laptop - GOOGLE DRIVE
-  setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_GW")     # Glen's home PC - GOOGLE DRIVE
+  #setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_GW")     # Glen's home PC - GOOGLE DRIVE
   #setwd("D:/Source/Project2_Building")                                 # Anna's new Laptop
+  setwd("C:/Source/MTVGJR_MGARCH/Project2_Building")
   
   source("clsTV.r")
   source("clsGARCH.r")
@@ -190,10 +191,8 @@ if(TRUE){
   
   OptCtrl <- TV$optimcontrol
   OptCtrl$reltol <- 1e-9
-  
   OptCtrl$parscale <- c(3, 3,3,0.05, 5,3,0.05, 5,3,0.05)
-  OptCtrl$ndeps <- rep(1e-5,TV@nr.pars)
-  #OptCtrl$parscale <- c(3, 1,1,0.3, 3,1,0.3, 3,1,0.3)
+  #OptCtrl$ndeps <- rep(1e-5,TV@nr.pars)
   OptCtrl$ndeps <- c(1e-5, 1e-5,1e-7,1e-5, 1e-7,1e-5,1e-5, 1e-7,1e-5,1e-5)
   TV$optimcontrol <- OptCtrl
   
@@ -274,31 +273,33 @@ if (TRUE) {
   if(TRUE) {
     
     #lG1 <- MTV1@garch                # For first iteration
-    lG1 <- MTV1$results[[1]]$garch   # For subsequent iterations - update the index!
+    lastResult <- length(MTV1$results)
+    
+    lG1 <- MTV1$results[[lastResult]]$garch   # For subsequent iterations 
     e <- e_orig/sqrt(lG1@h)
     
     #lT1 <- MTV1@tv                # For first iteration
-    lT1 <- MTV1$results[[1]]$tv   # For subsequent iterations - update the index!
+    lT1 <- MTV1$results[[lastResult]]$tv   # For subsequent iterations 
     
     summary(lT1)
     plot(lT1)
     ll.target <- getTargetValue(e,lT1)
     
     lT1$delta0 <- lT1$Estimated$delta0
-    lT1$pars <- lT1$Estimated$pars 
+    lT1$pars <- lT1$Estimated$pars * 0.987
     
-    lT1$pars["deltaN",] <- c(1.23,1.45)
-    lT1$pars["speedN",] <- c(2,3)
-    lT1$pars["locN1",] <- c(0.3,0.6)
-    #lT1$pars["locN2",] <- 0
+    # lT1$pars["deltaN",] <- c(1, 1, 1)
+    # lT1$pars["speedN",] <- c(3, 3, 3)
+    # lT1$pars["locN1",] <- c(0.2, 0.5, 0.5)
     
-    optCtrl <- lT1$optimcontrol
-    optCtrl$reltol <- 1e-9
-    optCtrl$ndeps <- c(1e-7,1e-7,1e-7,1e-7,1e-7,1e-7)
-    #optCtrl$ndeps <- c(1e-8,1e-7,1e-7,1e-9,1e-5,1e-7)
-    optCtrl$parscale <- c(3,1,1,3,1,1)
-    #optCtrl$parscale <- c(6,2,1,6,2,1)
-    lT1$optimcontrol <- optCtrl
+    OptCtrl <- lT1$optimcontrol
+    OptCtrl$reltol <- 1e-9
+    #OptCtrl$parscale <- c(3,3,0.05, 5,3,0.05, 5,3,0.05)
+    OptCtrl$parscale <- c(5,3,1, 7,3,1, 7,3,1)
+    
+    #OptCtrl$ndeps <- rep(1e-5,lT1@nr.pars)
+    OptCtrl$ndeps <- c(1e-5,1e-5,1e-5, 1e-7,1e-5,1e-5, 1e-7,1e-5,1e-5)
+    lT1$optimcontrol <- OptCtrl
     
     lT1 <- estimateTV(e,lT1,estCtrl)
     summary(lT1)  
@@ -312,20 +313,16 @@ if (TRUE) {
   # Filter out TV & estimate GARCH component
   if(TRUE) {
     
-    ## Restart NAB Here!!!
-    
     e <- e_orig/sqrt(lT1@g)
-    
-    #lG1 <- MTV1@garch                # For first iteration
-    lG1 <- MTV1$results[[1]]$garch   # For subsequent iterations - update the index!
+
     summary(lG1)
     ll.target <- getTargetValue(e,garchObj = lG1)
-    lG1$pars <- lG1$Estimated$pars
+    lG1$pars <- lG1$Estimated$pars * 0.987
     
-    lG1$pars["omega",1] <- 0.02
-    lG1$pars["alpha",1] <- 0.05
-    lG1$pars["beta",1] <- 0.80
-    lG1$pars["gamma",1] <- 0.05
+    # lG1$pars["omega",1] <- 0.05
+    # lG1$pars["alpha",1] <- 0.05
+    # lG1$pars["beta",1] <- 0.80
+    # lG1$pars["gamma",1] <- 0.05
     
     optCtrl <- lG1$optimcontrol
     optCtrl$reltol <- 1e-9
@@ -347,7 +344,7 @@ if (TRUE) {
   MTV1 <- calcLoglik(MTV1,lT1,lG1)
   
   # Pick the best specification & write it to the Estimated List:
-  MTV1$Estimated[[1]] <- MTV1$results[[2]]
+  MTV1$Estimated[[1]] <- MTV1$results[[7]]
   
   # Save the estimated model
   saveRDS(MTV1,"Output/NAB_mtvgjr_manual.RDS")
