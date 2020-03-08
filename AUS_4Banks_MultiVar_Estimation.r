@@ -1,36 +1,17 @@
-##==========================================================================================##
-##  Note:  The Multivar Specification has not been rigorously tested at this stage, so...
-##         This is a 'quick n dirty' estimation just to get indicative results.
-##         We will complete the full specification & estimation later.  23-Feb-2018
-##==========================================================================================##
 
-##==========================================================================================##
-##  Notes for use:
-##
-##    'DoThis <- TRUE/FALSE' is used to control the processing of distinct blocks of code 
-##
-##    The CalcProbabilityDist() can take some time to run. 
-##    This is why the compiler & doParallel packages have been used.
-##    Calls to this function may be commented out in the code below, 
-##    since we only need to generate them once.  After that we read it back from a file.
-##    To reuse the code with a new dataset, un-comment these lines.
-##    
-##==========================================================================================##
-
-
-####  ====================== Initialisation ========================  ####
+##  ============ Initialisation ==========  ####
 rm(list=ls())
 gc(T)
 
-if (TRUE){
+if (T){
   library(graphics)
   library(foreach)
   library(doParallel)
-  library(ts)
+  RevoUtilsMath::setMKLthreads(4)
 
-  setwd("C:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")        # Anna's work PC - GOOGLE DRIVE
-  #setwd("~/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")        # Anna's laptop - GOOGLE DRIVE
-  
+  #setwd("C:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")  # Anna's work PC - GOOGLE DRIVE
+  setwd("D:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")   # Anna's laptop - GOOGLE DRIVE
+
   source("clsCORR.r")
   source("clsTV.r")
   source("clsGARCH.r")
@@ -38,73 +19,56 @@ if (TRUE){
 }
 ##====================== Initialisation ========================##
 
-##====================== Data Setup ============================##
-DoThis <- FALSE
-if (DoThis){
-  mydata <- read.csv("Bank-Returns-18.csv",header=TRUE)
-  dates <- as.Date(mydata$date, format = "%d/%m/%Y")
-
-  #Create scaled-up individtal data series vectors (Percentage Returns):
-  mydata$e_anz <- mydata$anz * 100
-  mydata$e_cba <- mydata$cba * 100
-  mydata$e_nab <- mydata$nab * 100
-  mydata$e_wbc <- mydata$wbc * 100
-  
-  #De-mean the returns data:
-  mydata$e_anz <- mydata$e_anz - mean(mydata$e_anz)
-  mydata$e_cba <- mydata$e_wbc - mean(mydata$e_cba)
-  mydata$e_nab <- mydata$e_nab - mean(mydata$e_nab)
-  mydata$e_wbc <- mydata$e_wbc - mean(mydata$e_wbc)
-  
-  # save data  
-  saveRDS(mydata,"AUS_4Banks-ReturnsData_v2.1.RDS")
-  saveRDS(dates,"AUS_4Banks-Dates_v2.1.RDS")
-}
-##====================== Data Setup ============================##
-
-##====================== Data Load =============================##
-if (TRUE){
+##====================== Data Load ============================####
+if (T){
   # Read AUS_4Banks data from saved file
-  dates <- readRDS("AUS_4Banks-Dates_v2.1.RDS")
-  mydata <- readRDS("AUS_4Banks-ReturnsData_v2.1.RDS")
-  e_anz <- mydata$e_anz
-  e_cba <- mydata$e_cba
-  e_nab <- mydata$e_nab
-  e_wbc <- mydata$e_wbc
+  mydata <- readRDS("AUS_bankreturns_1992_2020.RDS")
+  dates <- mydata$date
+  
+  # Create scaled-up & de-meaned individual data series vectors (Percentage Returns):
+  e_anz <- mydata$return_anz * 100 
+  e_anz <- e_anz - mean(e_anz)
+  e_cba <- mydata$return_cba * 100 
+  e_cba <- e_cba - mean(e_cba)
+  e_nab <- mydata$return_nab * 100 
+  e_nab <- e_anz - mean(e_nab)
+  e_wbc <- mydata$return_wbc * 100 
+  e_wbc <- e_wbc - mean(e_wbc)
+  
+  MTV_anz <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
+  MTV_cba <- readRDS("Output/CBA_mtvgjr_manual.RDS")
+  MTV_nab <- readRDS("Output/NAB_mtvgjr_manual.RDS")
+  MTV_wbc <- readRDS("Output/WBC_mtvgjr_manual.RDS")
+  
+  ## N = Number of series
+  N <- 4
+  
+  # Tidy Up
+  rm(mydata)
+  gc(TRUE)
+
 }
-##====================== Data Load =============================##
+##====================== Data Load ============================##
+
+
 
 ##====================== Plot the Data =========================##
-DoThis <- FALSE
-if (DoThis) {
+if (F) {
   ymin <- -15
   ymax <- 15
   par(mar = c(2.5, 2.5, 2, 1))
   
   ptitle <- "ANZ"
-  #plot(e_anz,type="l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))  # Index on x-axis
   plot(dates,e_anz,"l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax)) # Dates on x-axis
-  # dev.copy(pdf,'ANZ_v2.pdf',width=5, height=5)
-  # dev.off()
   ptitle <- "CBA"
   plot(dates,e_cba,"l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
-  #plot(e_cba,type="l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
-  # dev.copy(pdf,'CBA_v2.pdf',width=5, height=5)
-  # dev.off()
   ptitle <- "NAB"
-  #plot(e_nab,type="l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
   plot(dates,e_nab,"l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
-  # dev.copy(pdf,'NAB_v2.pdf',width=5, height=5)
-  # dev.off()
   ptitle <- "WBC"
-  #plot(e_wbc,type="l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
   plot(dates,e_wbc,"l",main = ptitle,ylab="",xlab="",font.main=1, ylim=c(ymin, ymax))
-  # dev.copy(pdf,'WBC_v2.pdf',width=5, height=5)
-  # dev.off()
 }
-  ################# ABS(ret) and g PLOTS ########################
-DoThis <- FALSE
-if(DoThis){
+################# ABS(ret) and g PLOTS ########################
+if(F){
   tmp<- readRDS("Results/TVGJR_MultivarEstimation_2018_2.RDS")
   ymin <- 0
   ymax <- 10
@@ -139,9 +103,8 @@ if(DoThis){
   # dev.copy(pdf,'WBC_v2_g.pdf',width=5, height=5)
   # dev.off()
 }
-  ################# ACF PLOTS ########################
-DoThis <- FALSE
-if(DoThis){
+################# ACF PLOTS ########################
+if(F){
   ymin<-0
   ymax<-0.3
   par(font.main=1)
@@ -197,8 +160,7 @@ if(DoThis){
   
 }
 ################# CORRELATION PLOTS ########################
-DoThis <- FALSE
-if(DoThis){
+if(F){
   tmp<- readRDS("Results/TVGJR_MultivarEstimation_2018_2.RDS")
   ymin<-0.4
   ymax<-0.9
@@ -236,227 +198,61 @@ if(DoThis){
 ##====================== Plot the Data =========================##
 
 
-##==============================================================##
-#### Step 1:  Load the 4 univariate TV objects              ####
-##==============================================================##
 
 ##==============================================================##
-## Univariate TV Specifications are saved in AUS_4Banks_nTV.RDS:
-
-## See the "AUS_4Banks_UniVar-Specification_XXX_Ver2.r" files 
-##         (where XXX = ANZ,CBA,NAB,WBC)
-## for the full development of the univariate specifications.
-
-nTV <- readRDS("AUS_4Banks_nTV.RDS")
-
-TV_anz <- nTV$ANZ
-TV_cba <- nTV$CBA
-TV_nab <- nTV$NAB
-TV_wbc <- nTV$WBC
-
-N <- length(nTV)
-
-##==============================================================##
-#### Step 2:  Create the 4 univariate GARCH objects           ####
+#### Step 1:  Begin the multivariate estimation               ####
 ##==============================================================##
 
-# Note: This step is not necessary for the multivariate estimation,
-#       but it may be useful in providing us with suitable starting
-#       parameters...
-
-
-# ANZ:
-
-e <- e_anz/sqrt(TV_anz$Estimated$condvars)
-# Setup GARCH object with starting parameters
-GARCH <- newGARCH(GARCHtype$GJR,c(0.05,0.05,0.85,0.05))
-# Estimate the univar series:
-GARCH <- EstimateGARCH(e,GARCH)
-ptitle <- "GARCH_Univar_Estimate_ANZ"
-cat("\n", ptitle, "Logliklihood Value: ", GARCH$Estimated$value, "\nPars:",GARCH$Estimated$pars, "\n\n")
-# Look at the plots:
-plot(e,type="l")
-plot(GARCH$Estimated$condvars,type="l")
-GARCH_anz <- GARCH
-
-
-# CBA:
-
-e <- e_cba/sqrt(TV_cba$Estimated$condvars)
-# Setup GARCH object with starting parameters
-GARCH <- newGARCH(GARCHtype$GJR,c(0.05,0.05,0.85,0.05))
-# Estimate the univar series:
-GARCH <- EstimateGARCH(e,GARCH)
-ptitle <- "GARCH_Univar_Estimate_CBA"
-cat("\n", ptitle, "Logliklihood Value: ", GARCH$Estimated$value, "\nPars:",GARCH$Estimated$pars, "\n\n")
-# Look at the plots:
-plot(e,type="l")
-plot(GARCH$Estimated$condvars,type="l")
-
-GARCH_cba <- GARCH
-
-
-# NAB:
-
-e <- e_nab/sqrt(TV_nab$Estimated$condvars)
-# Setup GARCH object with starting parameters
-GARCH <- newGARCH(GARCHtype$GJR,c(0.05,0.05,0.85,0.05))
-# Estimate the univar series:
-GARCH <- EstimateGARCH(e,GARCH)
-ptitle <- "GARCH_Univar_Estimate_NAB"
-cat("\n", ptitle, "Logliklihood Value: ", GARCH$Estimated$value, "\nPars:",GARCH$Estimated$pars, "\n\n")
-# Look at the plots:
-plot(e,type="l")
-plot(GARCH$Estimated$condvars,type="l")
-
-GARCH_nab <- GARCH
-
-
-# WBC:
-
-e <- e_wbc/sqrt(TV_wbc$Estimated$condvars)
-# Setup GARCH object with starting parameters
-GARCH <- newGARCH(GARCHtype$GJR,c(0.05,0.05,0.85,0.05))
-# Estimate the univar series:
-GARCH <- EstimateGARCH(e,GARCH)
-ptitle <- "GARCH_Univar_Estimate_WBC"
-cat("\n", ptitle, "Logliklihood Value: ", GARCH$Estimated$value, "\nPars:",GARCH$Estimated$pars, "\n\n")
-# Look at the plots:
-plot(e,type="l")
-plot(GARCH$Estimated$condvars,type="l")
-
-GARCH_wbc <- GARCH
-
-##==============================================================##
-#### Step 3:  Create the multivariate objects for TV & GARCH  ####
-##==============================================================##
-
-## nTV was loaded above & used to create nGARCH
-
-nGARCH <- list()
-nGARCH$ANZ <- GARCH_anz
-nGARCH$CBA <- GARCH_cba
-nGARCH$NAB <- GARCH_nab
-nGARCH$WBC <- GARCH_wbc
-saveRDS(nGARCH,"AUS_4Banks_nGARCH.RDS")
-
-
-##==============================================================##
-#### Step 4:  Create the STCC object                          ####
-##==============================================================##
-
+#Build the matrix of data:
 e <- cbind(e_anz,e_cba,e_nab,e_wbc)
-Tobs <- ROW(e)    
 
-STCC <- newSTCC(Tobs)
-STCC$P1 <- matrix(0.2,N,N)  # Const Corr = 0.2
+z_anz <- e_anz/sqrt(MTV_anz$Estimated$tv@g * MTV_anz$Estimated$garch@h)
+z_cba <- e_cba/sqrt(MTV_cba$Estimated$tv@g * MTV_cba$Estimated$garch@h)
+z_nab <- e_nab/sqrt(MTV_nab$Estimated$tv@g * MTV_nab$Estimated$garch@h)
+z_wbc <- e_wbc/sqrt(MTV_wbc$Estimated$tv@g * MTV_wbc$Estimated$garch@h)
+
+z <- cbind(z_anz,z_cba,z_nab,z_wbc)
+
+STCC <- stcc(Tobs)
+STCC$P1 <- matrix(0.2,N,N)  # Const Corr = 0.1
 diag(STCC$P1) <- 1
-STCC$P2 <- matrix(0.8,N,N)  # Const Corr = 0.8
+STCC$P2 <- matrix(0.7,N,N)  # Const Corr = 0.9
 diag(STCC$P2) <- 1
+STCC$TRpars <- c(2,0.5)     # (speed,location)
+STCC$shape <- TVshape$single
 
-saveRDS(STCC,"AUS_4Banks_STCC.RDS")
-#
+## Modify start pars to improve estimates
+STCC$P1[3,1] <- 0.45
+STCC$P1[1,3] <- 0.45
 
-##==============================================================##
-#### Step 5:  Begin the multivariate estimation               ####
-##==============================================================##
+optCtrl <- STCC$optimcontrol
+STCC$optimcontrol <- optCtrl
 
-#Build the matrix of data:
-e <- cbind(e_anz,e_cba,e_nab,e_wbc)
+timestamp()
+STCC <- EstimateSTCC(z,STCC,calcHess = TRUE)
+timestamp()
 
-# Set the variance targetting mode:
-V_Tartget <- TRUE
+seP1 <- round(matrix(myUnVecl(STCC$Estimated$stderr[1:(N*(N-1)/2)]),N,N),4)
+seP2 <- round(matrix(myUnVecl(STCC$Estimated$stderr[(N*(N-1)/2+1):(N*(N-1))]),N,N),4)
+seTR <- round(tail(STCC$Estimated$stderr,2),3)
 
-## We need to manually track the LL value now, so:
-mvRTN <- NA
-mvRTN_prev <- NA
+round(STCC$Estimated$P1,4)
+seP1
 
-# 1: Get initial estimate of correlation, assuming No Garch:
-# 2: Now estimate the Garch, using the STCC estimates from above
-# 3: Now estimate the TV, using the GARCH estimates from above
-# 4: Estimate STCC using the nGARCH object from the previous estimate 
-##  Repeat steps 2 - 4 until optimisation is complete!
+round(STCC$Estimated$P2,4)
+seP2
 
-M_TV_GJR <- mvRTN
-saveRDS(M_TV_GJR, "M_TV_GJR.RDS")
+STCC$Estimated$TRpars
+seTR
 
-##==============================================================##
-##                            THE END
-##==============================================================##
+STCC$Estimated$value
 
+saveRDS(STCC,"Output/STCC_Estimated.RDS")
 
-##==============================================================##
-####  Step 6: Execute multivar estimation loop  ####
-##==============================================================##
-####====================== Data Load =============================####
-DoThis <- TRUE
-if (DoThis){
-  mydata <- readRDS("AUS_bankreturns_1992_2020.RDS")
-  dates <- mydata$date
-  e_anz <- mydata$return_anz * 100 
-  e_anz <- e_anz - mean(e_anz)
-  e_cba <- mydata$return_cba * 100 
-  e_cba <- e_cba - mean(e_cba)
-  e_nab <- mydata$return_nab * 100 
-  e_nab <- e_nab - mean(e_nab)
-  e_wbc <- mydata$return_wbc * 100 
-  e_wbc <- e_wbc - mean(e_wbc)
-}
-##====================== Data Load =============================##
-####====================== Object Load =============================####
-if (TRUE){
-  # Read AUS_4Banks manual estimation objects
-  MTV1_anz <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
-  MTV1_cba <- readRDS("Output/CBA_mtvgjr_manual.RDS")
-  MTV1_nab <- readRDS("Output/NAB_mtvgjr_manual.RDS")
-  MTV1_wbc <- readRDS("Output/WBC_mtvgjr_manual.RDS")
-}
-####====================== Object Load =============================####
-
-nTV <- list()
-nTV[[1]] <-MTV1_anz$Estimated[[1]]$tv
-nTV[[2]] <-MTV1_cba$Estimated[[1]]$tv
-nTV[[3]] <-MTV1_nab$Estimated[[1]]$tv
-nTV[[4]] <-MTV1_wbc$Estimated[[1]]$tv
-
-nGARCH <- list()
-nGARCH[[1]] <-MTV1_anz$Estimated[[1]]$garch
-nGARCH[[2]] <-MTV1_cba$Estimated[[1]]$garch
-nGARCH[[3]] <-MTV1_nab$Estimated[[1]]$garch
-nGARCH[[4]] <-MTV1_wbc$Estimated[[1]]$garch
-
-
-# Load up the univariate objects:
-#nTV <- readRDS("AUS_4Banks_nTV.RDS")
-#nGARCH <- readRDS("AUS_4Banks_nGARCH.RDS")
-#STCC <- readRDS("STCC_ht1.RDS")
+## The end  ####
 
 
 
-#Build the matrix of data:
-e <- cbind(e_anz,e_cba,e_nab,e_wbc)
-z_anz <- e_anz/sqrt(nTV[[1]]@g*nGARCH[[1]]@h)
-z_cba <- e_cba/sqrt(nTV[[2]]@g*nGARCH[[2]]@h)
-z_nab <- e_nab/sqrt(nTV[[3]]@g*nGARCH[[3]]@h)
-z_wbc <- e_wbc/sqrt(nTV[[4]]@g*nGARCH[[4]]@h)
-z<- cbind(z_anz,z_cba,z_nab,z_wbc)
-
-Tobs <- NROW(e)
-N <- NCOL(e)
-STCC <- newSTCC(Tobs)
-P1 <- matrix(0.2,N,N)
-diag(P1) <- 1
-STCC$P1 <- P1
-P2 <- matrix(0.8,N,N)
-diag(P2) <- 1
-STCC$P2 <- P2
-STCC$shape <- TVshape$double
-
-stcc<-STCC
-tmp <- EstimateSTCC(z,STCC)
-
-# Set the variance targetting mode:
-V_Target <- TRUE
 
 # Set up the multivariate Return object:
 mvRTN <- list()     
@@ -464,26 +260,14 @@ mvRTN$ngarch <- nGARCH
 mvRTN$ntv <- nTV
 mvRTN$stcc <- STCC
 
-# Setup a list to track LL for each loop:
-loops <- 3
-m_results <- list()
-listIdx <- 0
-for (n in 1:(3*loops)) m_results[[n]] <- list()
 
-for (n in 1:loops) {
-  
   # 1: Estimate the Garch, using the STCC estimates from above
   nTV <- mvRTN$ntv
   STCC <- mvRTN$stcc
   tmr <- proc.time()
   mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="GARCH",var_target=V_Target)
   proc.time() - tmr
-  # 900 secs
-  # Compare prev & new
-  
-  listIdx <- (n-1)*3 + 1
-  m_results[[listIdx]]$ll_value <- mvRTN$value
-  m_results[[listIdx]]$m_pars <- mvRTN$m_pars
+
   
   # 2: Now estimate the TV, using the GARCH estimates from above
   nGARCH <- mvRTN$ngarch
@@ -491,44 +275,29 @@ for (n in 1:loops) {
   tmr <- proc.time()
   mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="TV",var_target=V_Target)
   proc.time() - tmr
-  # 140 secs
-  # Compare prev & new
-  
-  listIdx <- (n-1)*3 + 2
-  m_results[[listIdx]]$ll_value <- mvRTN$value
-  m_results[[listIdx]]$m_pars <- mvRTN$m_pars
-  
+
+
   # 3: Now estimate the Correlation, using the TV & GARCH estimates from above
   nTV <- mvRTN$ntv
   nGARCH <- mvRTN$ngarch
   tmr <- proc.time()
   mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="STCC",var_target=V_Target)
   proc.time() - tmr
-  # Compare prev & new
   
-  listIdx <- (n-1)*3 + 3
-  m_results[[listIdx]]$ll_value <- mvRTN$value
-  m_results[[listIdx]]$m_pars <- mvRTN$m_pars
-
-  # 4. Update & save results from this loop!
-  cat ("\nEnd of Loop number:", n)
-  # Save to file!!
-  saveRDS(m_results,"TVGJR_MultivarEstimation.RDS")
-
+ 
   ###  Check if things have changed!!!  ###
   
-  identical(nTV,mvRTN$ntv)
-  identical(nGARCH,mvRTN$ngarch)
-  identical(STCC,mvRTN$stcc)
-  #
-}
+
+
 
 ##==============================================================##
 ##                            THE END
 ##==============================================================##
 
 
-
+if (T) {
+  
+  
 plot(STCC$Estimated$condcorrs[,1],type = 'l',ylim=c(0.45,0.85),panel.first = grid())
 lines(STCC$Estimated$condcorrs[,2],type = 'l',col="red")
 lines(STCC$Estimated$condcorrs[,3],type = 'l',col="green")
@@ -575,50 +344,6 @@ lines(lcor[,6],type = 'l')
 lines((nTV$ANZ$Estimated$condvars/12),type = 'l',col="red")
 legend("topleft",inset = 0.05,legend = "Window: 250", box.col = "white")
 
+}
+
 ## -----------------------------------------------   ##
-
-
-####  ======  Calculate Standard Errors  ======  ####
-
-STCC <- newSTCC(Tobs)
-STCC$P1 <- matrix(0.2,N,N)  # Const Corr = 0.2
-diag(STCC$P1) <- 1
-STCC$P2 <- matrix(0.8,N,N)  # Const Corr = 0.8
-diag(STCC$P2) <- 1
-
-
-
-
-#ntv <- mvRTN$ntv
-#ngarch <- mvRTN$ngarch
-stcc <- mvRTN$stcc
-var_target <- TRUE
-calcHess <- TRUE
-
-## STCC Std Errors:
-optimpars <- tail(mvRTN$m_pars,14)
-focus <- "STCC"
-hess <- optimHess(optimpars,myLogLik.multivar.TVGARCHSTCC,gr=NULL,e,ntv,ngarch,stcc,focus,var_target,return_ll=TRUE)
-
-optimpars
-se <- sqrt(-diag(solve(hess))) 
-
-
-## GARCH Std Errors:
-optimpars <- (mvRTN$m_pars[50:65])
-focus <- "GARCH"
-hess <- optimHess(optimpars,myLogLik.multivar.TVGARCHSTCC,gr=NULL,e,ntv,ngarch,stcc,focus,var_target,return_ll=TRUE)
-
-optimpars
-gse <- sqrt(-diag(solve(hess))) 
-
-## TV Std Errors:
-optimpars <- (mvRTN$m_pars[1:49])
-focus <- "TV"
-hess <- optimHess(optimpars,myLogLik.multivar.TVGARCHSTCC,gr=NULL,e,ntv,ngarch,stcc,focus,var_target,return_ll=TRUE)
-tvse <- sqrt(-diag(solve(hess))) 
-optimpars
-tvse
-
-
-
