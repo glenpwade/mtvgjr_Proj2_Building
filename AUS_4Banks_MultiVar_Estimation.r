@@ -28,17 +28,20 @@ if (T){
   # Create scaled-up & de-meaned individual data series vectors (Percentage Returns):
   e_anz <- mydata$return_anz * 100 
   e_anz <- e_anz - mean(e_anz)
+  
   e_cba <- mydata$return_cba * 100 
   e_cba <- e_cba - mean(e_cba)
+  
   e_nab <- mydata$return_nab * 100 
-  e_nab <- e_anz - mean(e_nab)
+  e_nab <- e_nab - mean(e_nab)
+  
   e_wbc <- mydata$return_wbc * 100 
   e_wbc <- e_wbc - mean(e_wbc)
   
-  MTV_anz <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
-  MTV_cba <- readRDS("Output/CBA_mtvgjr_manual.RDS")
-  MTV_nab <- readRDS("Output/NAB_mtvgjr_manual.RDS")
-  MTV_wbc <- readRDS("Output/WBC_mtvgjr_manual.RDS")
+  mtvANZ <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
+  mtvCBA <- readRDS("Output/CBA_mtvgjr_manual.RDS")
+  mtvNAB <- readRDS("Output/NAB_mtvgjr_manual.RDS")
+  mtvWBC <- readRDS("Output/WBC_mtvgjr_manual.RDS")
   
   ## N = Number of series
   N <- 4
@@ -206,11 +209,10 @@ if(F){
 #Build the matrix of data:
 e <- cbind(e_anz,e_cba,e_nab,e_wbc)
 
-z_anz <- e_anz/sqrt(MTV_anz$Estimated$tv@g * MTV_anz$Estimated$garch@h)
-z_cba <- e_cba/sqrt(MTV_cba$Estimated$tv@g * MTV_cba$Estimated$garch@h)
-z_nab <- e_nab/sqrt(MTV_nab$Estimated$tv@g * MTV_nab$Estimated$garch@h)
-z_wbc <- e_wbc/sqrt(MTV_wbc$Estimated$tv@g * MTV_wbc$Estimated$garch@h)
-
+z_anz <- e_anz/sqrt(mtvANZ$Estimated$tv@g * mtvANZ$Estimated$garch@h)
+z_cba <- e_cba/sqrt(mtvCBA$Estimated$tv@g * mtvCBA$Estimated$garch@h)
+z_nab <- e_nab/sqrt(mtvNAB$Estimated$tv@g * mtvNAB$Estimated$garch@h)
+z_wbc <- e_wbc/sqrt(mtvWBC$Estimated$tv@g * mtvWBC$Estimated$garch@h)
 z <- cbind(z_anz,z_cba,z_nab,z_wbc)
 
 STCC <- stcc(Tobs)
@@ -220,13 +222,6 @@ STCC$P2 <- matrix(0.7,N,N)  # Const Corr = 0.9
 diag(STCC$P2) <- 1
 STCC$TRpars <- c(2,0.5)     # (speed,location)
 STCC$shape <- TVshape$single
-
-## Modify start pars to improve estimates
-STCC$P1[3,1] <- 0.45
-STCC$P1[1,3] <- 0.45
-
-optCtrl <- STCC$optimcontrol
-STCC$optimcontrol <- optCtrl
 
 timestamp()
 STCC <- EstimateSTCC(z,STCC,calcHess = TRUE)
