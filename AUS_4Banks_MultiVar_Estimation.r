@@ -10,8 +10,9 @@ if (T){
   RevoUtilsMath::setMKLthreads(4)
 
   #setwd("C:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")  # Anna's work PC - GOOGLE DRIVE
-  setwd("D:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")   # Anna's laptop - GOOGLE DRIVE
-
+  #setwd("D:/GoogleDrive/MyDocs/Annastiina/Topics/MTVGJR_MGARCH/Project2_Building_2020")   # Anna's laptop - GOOGLE DRIVE
+  setwd("C:/Source/MTVGJR")
+  
   source("clsCORR.r")
   source("clsTV.r")
   source("clsGARCH.r")
@@ -38,10 +39,10 @@ if (T){
   e_wbc <- mydata$return_wbc * 100 
   e_wbc <- e_wbc - mean(e_wbc)
   
-  mtvANZ <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
-  mtvCBA <- readRDS("Output/CBA_mtvgjr_manual.RDS")
-  mtvNAB <- readRDS("Output/NAB_mtvgjr_manual.RDS")
-  mtvWBC <- readRDS("Output/WBC_mtvgjr_manual.RDS")
+  MTV_anz <- readRDS("Output/ANZ_mtvgjr_manual.RDS")
+  MTV_cba <- readRDS("Output/CBA_mtvgjr_manual.RDS")
+  MTV_nab <- readRDS("Output/NAB_mtvgjr_manual.RDS")
+  MTV_wbc <- readRDS("Output/WBC_mtvgjr_manual.RDS")
   
   ## N = Number of series
   N <- 4
@@ -209,19 +210,28 @@ if(F){
 #Build the matrix of data:
 e <- cbind(e_anz,e_cba,e_nab,e_wbc)
 
-z_anz <- e_anz/sqrt(mtvANZ$Estimated$tv@g * mtvANZ$Estimated$garch@h)
-z_cba <- e_cba/sqrt(mtvCBA$Estimated$tv@g * mtvCBA$Estimated$garch@h)
-z_nab <- e_nab/sqrt(mtvNAB$Estimated$tv@g * mtvNAB$Estimated$garch@h)
-z_wbc <- e_wbc/sqrt(mtvWBC$Estimated$tv@g * mtvWBC$Estimated$garch@h)
+z_anz <- e_anz/sqrt(MTV_anz$Estimated$tv@g * MTV_anz$Estimated$garch@h)
+z_cba <- e_cba/sqrt(MTV_cba$Estimated$tv@g * MTV_cba$Estimated$garch@h)
+z_nab <- e_nab/sqrt(MTV_nab$Estimated$tv@g * MTV_nab$Estimated$garch@h)
+z_wbc <- e_wbc/sqrt(MTV_wbc$Estimated$tv@g * MTV_wbc$Estimated$garch@h)
+
 z <- cbind(z_anz,z_cba,z_nab,z_wbc)
+Tobs <- NROW(z)
 
 STCC <- stcc(Tobs)
-STCC$P1 <- matrix(0.2,N,N)  # Const Corr = 0.1
+STCC$P1 <- matrix(0.4,N,N)  # Const Corr = 0.1
 diag(STCC$P1) <- 1
 STCC$P2 <- matrix(0.7,N,N)  # Const Corr = 0.9
 diag(STCC$P2) <- 1
 STCC$TRpars <- c(2,0.5)     # (speed,location)
 STCC$shape <- TVshape$single
+
+## Modify start pars to improve estimates
+STCC$P1[4,1] <- 0.55
+STCC$P1[1,4] <- 0.55
+
+nr.pars <- 14
+STCC$optimcontrol$ndeps <- rep(1e-5,nr.pars)
 
 timestamp()
 STCC <- EstimateSTCC(z,STCC,calcHess = TRUE)
@@ -246,68 +256,21 @@ saveRDS(STCC,"Output/STCC_Estimated.RDS")
 
 ## The end  ####
 
+Pt <- STCC$Estimated$Pt
+
+plot(Pt[,1],type = 'l',ylim=c(0.2,0.9),panel.first = grid(),main="Window:250,data:z")
+lines(Pt[,2],type = 'l',col="red")
+lines(Pt[,3],type = 'l',col="green")
+lines(Pt[,4],type = 'l',col="blue")
+lines(Pt[,5],type = 'l',col="darkgrey")
+lines(Pt[,6],type = 'l',col="yellow",lwd=2)
 
 
 
-# Set up the multivariate Return object:
-mvRTN <- list()     
-mvRTN$ngarch <- nGARCH
-mvRTN$ntv <- nTV
-mvRTN$stcc <- STCC
-
-
-  # 1: Estimate the Garch, using the STCC estimates from above
-  nTV <- mvRTN$ntv
-  STCC <- mvRTN$stcc
-  tmr <- proc.time()
-  mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="GARCH",var_target=V_Target)
-  proc.time() - tmr
-
-  
-  # 2: Now estimate the TV, using the GARCH estimates from above
-  nGARCH <- mvRTN$ngarch
-  STCC <- mvRTN$stcc
-  tmr <- proc.time()
-  mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="TV",var_target=V_Target)
-  proc.time() - tmr
-
-
-  # 3: Now estimate the Correlation, using the TV & GARCH estimates from above
-  nTV <- mvRTN$ntv
-  nGARCH <- mvRTN$ngarch
-  tmr <- proc.time()
-  mvRTN <- EstimateM_TVGARCH(e,nTV,nGARCH,STCC,focus="STCC",var_target=V_Target)
-  proc.time() - tmr
-  
- 
-  ###  Check if things have changed!!!  ###
-  
-
-
-
-##==============================================================##
-##                            THE END
-##==============================================================##
-
-
-if (T) {
-  
-  
-plot(STCC$Estimated$condcorrs[,1],type = 'l',ylim=c(0.45,0.85),panel.first = grid())
-lines(STCC$Estimated$condcorrs[,2],type = 'l',col="red")
-lines(STCC$Estimated$condcorrs[,3],type = 'l',col="green")
-lines(STCC$Estimated$condcorrs[,4],type = 'l',col="blue")
-lines(STCC$Estimated$condcorrs[,5],type = 'l',col="darkgrey")
-lines(STCC$Estimated$condcorrs[,6],type = 'l',col="yellow",lwd=2)
-
-saveRDS(mvRTN,"MTVGJR_Estimated_vartarget_OFF.RDS")
-mvRTN <- readRDS("MTVGJR_Estimated.RDS")
-
-
-## Run a rolling window over the data - calc local correlation ##
+## Calc local correlation using rolling window ####
 
 calculate_local_corr <- function(e,localvarwindow=500) {
-
+  
   Tobs <- NROW(e)
   localCorr <- matrix(NA,Tobs,6)
   
@@ -323,22 +286,14 @@ calculate_local_corr <- function(e,localvarwindow=500) {
   localCorr
 }
 
-e <- cbind(e_anz,e_cba,e_nab,e_wbc)
+Pt_rollingWin <- calculate_local_corr(z,250)
+Pt <- Pt_rollingWin
+# Re-run the charts using the code above
 
-lcor <- calculate_local_corr(e,250)
 
 
-plot(mvRTN$stcc$Estimated$condcorrs[,1],col="blue",ylab="",xlab="",lwd=2,type = 'l',ylim=c(0,1),panel.first = grid())
-#plot(lcor[,1],type = 'l')
-lines(lcor[,1],type = 'l')
-lines(lcor[,2],type = 'l')
-lines(lcor[,3],type = 'l')
-lines(lcor[,4],type = 'l')
-lines(lcor[,5],type = 'l')
-lines(lcor[,6],type = 'l')
-lines((nTV$ANZ$Estimated$condvars/12),type = 'l',col="red")
-legend("topleft",inset = 0.05,legend = "Window: 250", box.col = "white")
 
-}
+##==============================================================##
+##                            THE END
+##==============================================================##
 
-## -----------------------------------------------   ##
